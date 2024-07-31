@@ -21,25 +21,50 @@ vector<string> getElementsString(const string line, GLchar sep);
 class Model
 {
 public:
-    // model data 
-    vector<Mesh>     meshes;
-    map<string, Material> materials;
-    string directory;
-
     // constructor, expects a filepath to a 3D model.
     Model(const string& path)
     {
         loadModel(path);
+        setOneModel();
     }
 
     // draws the model, and thus all its meshes
     void Draw(Shader& shader)
     {
+        shader.setMat4("model", model);
         for (GLuint i = 0; i < meshes.size(); i++)
             meshes[i].Draw(shader);
     }
 
+    void setTranslate(glm::vec3 a)
+    {
+        model = glm::translate(model, a);
+    }
+
+    void setScale(glm::vec3 a)
+    {
+        model = glm::scale(model, a);
+    }
+
+    void setRotate(glm::vec3 a, GLfloat angle)
+    {
+        model = glm::rotate(model, angle, a);
+    }
+
 private:
+    // model data 
+    vector<Mesh> meshes;
+    map<string, Material> materials;
+    string directory;
+    glm::mat4 model;
+
+    void setOneModel()
+    {
+        this->model = glm::mat4(1.0f);
+        this->model = glm::translate(this->model, glm::vec3(0.0f, 0.0f, 0.0f));
+        this->model = glm::scale(this->model, glm::vec3(1.0f, 1.0f, 1.0f));
+    }
+
     // loads a model with supported ASSIMP extensions from file and stores the resulting meshes in the meshes vector.
     void loadModel(const string& path)
     {
