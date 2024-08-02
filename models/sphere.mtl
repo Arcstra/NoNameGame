@@ -1,10 +1,10 @@
-# Blender 4.2.0 MTL File: 'None'
+# Blender 3.6.1 MTL File: 'None'
 # www.blender.org
 
-newmtl Material
+newmtl Материал
 Ns 250.000000
 Ka 1.000000 1.000000 1.000000
-Kd 0.432649 0.080175 0.800687
+Kd 0.098658 0.800000 0.265779
 Ks 0.500000 0.500000 0.500000
 Ke 0.000000 0.000000 0.000000
 Ni 1.450000

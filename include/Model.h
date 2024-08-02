@@ -8,13 +8,18 @@
 
 #include "Mesh.h"
 #include "Shader.h"
+#include "Collision.h"
+#include "uuid.h"
 
 #include <string>
 #include <iostream>
 #include <map>
 #include <algorithm>
+#include <random>
 #include <vector>
 using namespace std;
+
+
 
 vector<string> getElementsString(const string line, GLchar sep);
 
@@ -39,30 +44,63 @@ public:
     void setTranslate(glm::vec3 a)
     {
         model = glm::translate(model, a);
+        SetCollisionModel();
     }
 
     void setScale(glm::vec3 a)
     {
         model = glm::scale(model, a);
+        SetCollisionModel();
     }
 
     void setRotate(glm::vec3 a, GLfloat angle)
     {
         model = glm::rotate(model, angle, a);
+        SetCollisionModel();
+    }
+
+    void addCollisionRectangle(glm::vec3 vertex[8])
+    {
+        colrec.push_back(CollisionRectangle(vertex));
+    }
+
+    vector<CollisionRectangle> getCollisionRectangle()
+    {
+        return colrec;
+    }
+
+    void addCollisionSphere(glm::vec3 centre, GLfloat radius)
+    {
+        sphereCollisions.push_back(CollisionSphere(centre, radius));
+    }
+
+    vector<CollisionSphere> getCollisionSphere()
+    {
+        return sphereCollisions;
+    }
+
+    string getUniqueNumber()
+    {
+        return this->uniqueNumber;
     }
 
 private:
     // model data 
     vector<Mesh> meshes;
+    vector<CollisionRectangle> colrec;
+    vector<CollisionSphere> sphereCollisions;
     map<string, Material> materials;
     string directory;
     glm::mat4 model;
+    string uniqueNumber;
 
     void setOneModel()
     {
         this->model = glm::mat4(1.0f);
         this->model = glm::translate(this->model, glm::vec3(0.0f, 0.0f, 0.0f));
         this->model = glm::scale(this->model, glm::vec3(1.0f, 1.0f, 1.0f));
+        this->uniqueNumber = uuid::generate_uuid_v4();
+        SetCollisionModel();
     }
 
     // loads a model with supported ASSIMP extensions from file and stores the resulting meshes in the meshes vector.
@@ -154,6 +192,14 @@ private:
         }
 
         this->materials = materials;
+    }
+
+    void SetCollisionModel() {
+        for (CollisionRectangle& col: colrec)
+            col.setModel(model);
+
+        for (CollisionSphere& col: sphereCollisions)
+            col.setModel(model);
     }
 };
 

@@ -7,6 +7,7 @@
 #include "Shader.h"
 #include "Camera.h"
 #include "Model.h"
+#include "PhysicModel.h"
 
 #include <iostream>
 
@@ -79,12 +80,20 @@ int main()
 
     // load models
     // -----------
-    Model ourModel("models/cube.obj");
+    StaticModel ourModel("models/sphere.obj");
+    ourModel.addCollisionSphere(glm::vec3(0.0f), 1.0f);
 
+    StaticModel ourModel2("models/sphere.obj");
+    ourModel2.addCollisionSphere(glm::vec3(0.0f), 1.0f);
+    ourModel2.setTranslate(glm::vec3(5.0f, 0.0f, 0.0f));
+
+    PhysicModel fallingSphere("models/sphere.obj");
+    fallingSphere.addCollisionSphere(glm::vec3(0.0f), 1.0f);
+    fallingSphere.setTranslate(glm::vec3(0.5f, 10.0f, 0.0f));
 
     // draw in wireframe
     //glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-
+    
     // render loop
     // -----------
     while (!glfwWindowShouldClose(window))
@@ -124,7 +133,12 @@ int main()
 
         // render the loaded model
         ourModel.setRotate(glm::vec3(1.0f, 0.5f, 0.0f), deltaTime);
-        ourModel.Draw(ourShader);
+        ourModel.StaticDraw(ourShader);
+        ourModel2.StaticDraw(ourShader);
+
+        fallingSphere.setBoostWithCollisionSphere(ourModel);
+        fallingSphere.setBoostWithCollisionSphere(ourModel2);
+        fallingSphere.PhysicDraw(ourShader, deltaTime);
 
 
         // glfw: swap buffers

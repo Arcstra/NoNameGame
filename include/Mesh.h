@@ -53,9 +53,10 @@ public:
     // render the mesh
     void Draw(Shader& shader)
     {
-        shader.setVec3("material.ambient", material.Ambient);
+        // Пока используем только material.Diffuse
+        shader.setVec3("material.ambient", material.Diffuse);
         shader.setVec3("material.diffuse", material.Diffuse);
-        shader.setVec3("material.specular", material.Specular);
+        shader.setVec3("material.specular", material.Diffuse);
         shader.setFloat("material.shininess", material.Shininess);
 
         // draw mesh
