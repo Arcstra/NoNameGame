@@ -1,4 +1,5 @@
-#pragma once
+#ifndef CAMERA_H
+#define CAMERA_H
 
 // Std. Includes
 #include <vector>
@@ -87,6 +88,21 @@ public:
             this->Position -= glm::vec3(0.0f, 1.0f, 0.0f) * velocity;
     }
 
+    void setTranslate(glm::vec3 translate)
+    {
+        this->Position += translate;
+    }
+
+    glm::vec3 getFront()
+    {
+        return this->Front;
+    }
+
+    glm::vec3 getRight()
+    {
+        return this->Right;
+    }
+
     // Processes input received from a mouse input system. Expects the offset value in both the x and y direction.
     void ProcessMouseMovement(GLfloat xoffset, GLfloat yoffset, GLboolean constrainPitch = true)
     {
@@ -135,3 +151,5 @@ private:
         this->Up = glm::normalize(glm::cross(this->Right, this->Front));
     }
 };
+
+#endif

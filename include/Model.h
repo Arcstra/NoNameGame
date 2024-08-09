@@ -17,8 +17,8 @@
 #include <algorithm>
 #include <random>
 #include <vector>
-using namespace std;
 
+using namespace std;
 
 
 vector<string> getElementsString(const string line, GLchar sep);
@@ -27,7 +27,7 @@ class Model
 {
 public:
     // constructor, expects a filepath to a 3D model.
-    Model(const string& path)
+    Model(string path)
     {
         loadModel(path);
         setOneModel();
@@ -43,23 +43,51 @@ public:
 
     void setTranslate(glm::vec3 a)
     {
-        model = glm::translate(model, a);
-        SetCollisionModel();
+        this->translate += a;
+        setModel();
+        setCollisionModel();
     }
 
     void setScale(glm::vec3 a)
     {
-        model = glm::scale(model, a);
-        SetCollisionModel();
+        this->scale *= a;
+        setModel();
+        setCollisionModel();
     }
 
     void setRotate(glm::vec3 a, GLfloat angle)
     {
-        model = glm::rotate(model, angle, a);
-        SetCollisionModel();
+        glm::vec3 point0, point1;
+        glm::mat4 model = glm::rotate(glm::mat4(1.0f), angle, a);
+        angle = 0.0f;
+        glm::vec3 croosAngle = glm::cross(glm::vec3(1.0f), glm::vec3(model * glm::vec4(1.0f)));
+
+        point0 = glm::vec3(1.0f, 1.0f, 0.0f);
+        point1 = model * glm::vec4(point0.x, point0.y, point0.z, 1.0f);
+        angle = glm::acos(glm::dot(glm::normalize(glm::vec2(point0.x, point0.y)),glm::normalize(glm::vec2(point1.x, point1.y))));
+        if (croosAngle.z < 0.0f)
+            angle *= -1;
+        this->rotateXY = angle;
+
+        point0 = glm::vec3(1.0f, 0.0f, 1.0f);
+        point1 = model * glm::vec4(point0.x, point0.y, point0.z, 1.0f);
+        angle = glm::acos(glm::dot(glm::normalize(glm::vec2(point0.z, point0.x)),glm::normalize(glm::vec2(point1.z, point1.x))));
+        if (croosAngle.y < 0.0f)
+            angle *= -1;
+        this->rotateZX = angle;
+
+        point0 = glm::vec3(0.0f, 1.0f, 1.0f);
+        point1 = model * glm::vec4(point0.x, point0.y, point0.z, 1.0f);
+        angle = glm::acos(glm::dot(glm::normalize(glm::vec2(point0.z, point0.y)),glm::normalize(glm::vec2(point1.z, point1.y))));
+        if (croosAngle.x < 0.0f)
+            angle *= -1;
+        this->rotateZY = angle;
+        
+        setModel();
+        setCollisionModel();
     }
 
-    void addCollisionRectangle(glm::vec3 vertex[8])
+    void addCollisionRectangle(vector<glm::vec3> vertex)
     {
         colrec.push_back(CollisionRectangle(vertex));
     }
@@ -93,14 +121,19 @@ private:
     string directory;
     glm::mat4 model;
     string uniqueNumber;
+    GLfloat rotateXY, rotateZY, rotateZX;
+    glm::vec3 translate, scale;
 
     void setOneModel()
     {
-        this->model = glm::mat4(1.0f);
-        this->model = glm::translate(this->model, glm::vec3(0.0f, 0.0f, 0.0f));
-        this->model = glm::scale(this->model, glm::vec3(1.0f, 1.0f, 1.0f));
+        this->translate = glm::vec3(0.0f);
+        this->scale = glm::vec3(1.0f);
         this->uniqueNumber = uuid::generate_uuid_v4();
-        SetCollisionModel();
+        this->rotateXY = 0.0f;
+        this->rotateZX = 0.0f;
+        this->rotateZY = 0.0f;
+        setModel();
+        setCollisionModel();
     }
 
     // loads a model with supported ASSIMP extensions from file and stores the resulting meshes in the meshes vector.
@@ -194,12 +227,24 @@ private:
         this->materials = materials;
     }
 
-    void SetCollisionModel() {
+    void setModel()
+    {
+        glm::mat4 model(1.0f);
+        model = glm::translate(model, translate);
+        model = glm::rotate(model, rotateXY, glm::vec3(0.0f, 0.0f, 1.0f));
+        model = glm::rotate(model, rotateZX, glm::vec3(0.0f, 1.0f, 0.0f));
+        model = glm::rotate(model, rotateZY, glm::vec3(1.0, 0.0f, 0.0f));
+        model = glm::scale(model, scale);
+        this->model = model;
+    }
+
+    void setCollisionModel()
+    {
         for (CollisionRectangle& col: colrec)
-            col.setModel(model);
+            col.setModel(this->model);
 
         for (CollisionSphere& col: sphereCollisions)
-            col.setModel(model);
+            col.setModel(this->model);
     }
 };
 

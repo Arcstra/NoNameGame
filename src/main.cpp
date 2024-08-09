@@ -4,10 +4,7 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
-#include "Shader.h"
-#include "Camera.h"
-#include "Model.h"
-#include "PhysicModel.h"
+#include "Player.h"
 
 #include <iostream>
 
@@ -17,11 +14,12 @@ void scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
 void processInput(GLFWwindow* window);
 
 // settings
-const unsigned int SCR_WIDTH = 1280;
-const unsigned int SCR_HEIGHT = 720;
+const unsigned int SCR_WIDTH = 800;
+const unsigned int SCR_HEIGHT = 400;
 
 // camera
-Camera camera(glm::vec3(0.0f, 0.0f, 3.0f));
+Player player;
+// Camera camera(glm::vec3(0.0f, 0.0f, 3.0f));
 float lastX = SCR_WIDTH / 2.0f;
 float lastY = SCR_HEIGHT / 2.0f;
 bool firstMouse = true;
@@ -80,16 +78,29 @@ int main()
 
     // load models
     // -----------
-    StaticModel ourModel("models/sphere.obj");
-    ourModel.addCollisionSphere(glm::vec3(0.0f), 1.0f);
+    StaticModel floor("models/cube.obj");
+    vector<glm::vec3> cubeVertex = {
+        glm::vec3(-1.0f, -1.0f, 1.0f),
+        glm::vec3(1.0f, -1.0f, 1.0f),
+        glm::vec3(1.0f, -1.0f, -1.0f),
+        glm::vec3(-1.0f, -1.0f, -1.0f),
+        glm::vec3(-1.0f, 1.0f, 1.0f),
+        glm::vec3(1.0f, 1.0f, 1.0f),
+        glm::vec3(1.0f, 1.0f, -1.0f),
+        glm::vec3(-1.0f, 1.0f, -1.0f)
+    };
+    floor.addCollisionRectangle(cubeVertex);
+    floor.setTranslate(glm::vec3(0.0f, -2.0f, 0.0f));
+    floor.setScale(glm::vec3(10.0f, 1.0f, 10.0f));
 
-    StaticModel ourModel2("models/sphere.obj");
-    ourModel2.addCollisionSphere(glm::vec3(0.0f), 1.0f);
-    ourModel2.setTranslate(glm::vec3(5.0f, 0.0f, 0.0f));
+    PhysicModel fallingSphere("models/cube.obj");
+    fallingSphere.addCollisionRectangle(cubeVertex);
+    fallingSphere.setTranslate(glm::vec3(1.0f, 10.0f, -3.0f));
+    // fallingSphere.setRotate(glm::vec3(0.0f, 0.0f, 1.0f), glm::radians(45.0f));
 
-    PhysicModel fallingSphere("models/sphere.obj");
-    fallingSphere.addCollisionSphere(glm::vec3(0.0f), 1.0f);
-    fallingSphere.setTranslate(glm::vec3(0.5f, 10.0f, 0.0f));
+    player = Player("models/cube.obj");
+    player.addCollisionRectangle(cubeVertex);
+    player.setTranslate(glm::vec3(0.0f, 10.0f, 0.0f));
 
     // draw in wireframe
     //glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
@@ -103,6 +114,7 @@ int main()
         float currentFrame = static_cast<float>(glfwGetTime());
         deltaTime = currentFrame - lastFrame;
         lastFrame = currentFrame;
+        // cout << 1 / deltaTime << "\n";
 
         // input
         // -----
@@ -118,7 +130,7 @@ int main()
         ourShader.use();
 
         ourShader.setVec3("dirLight.direction", -0.2f, -1.0f, -0.3f);
-        ourShader.setVec3("viewPos", camera.Position);
+        ourShader.setVec3("viewPos", player.getCameraPosition());
 
         // light properties
         ourShader.setVec3("dirLight.ambient", 0.07f, 0.07f, 0.07f);
@@ -126,25 +138,30 @@ int main()
         ourShader.setVec3("dirLight.specular", 1.0f, 1.0f, 1.0f);
 
         // view/projection transformations
-        glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 100.0f);
-        glm::mat4 view = camera.GetViewMatrix();
+        glm::mat4 projection = glm::perspective(glm::radians(player.getCameraZoom()), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 100.0f);
+        glm::mat4 view = player.getCameraViewMatrix();
         ourShader.setMat4("projection", projection);
         ourShader.setMat4("view", view);
 
         // render the loaded model
-        ourModel.setRotate(glm::vec3(1.0f, 0.5f, 0.0f), deltaTime);
-        ourModel.StaticDraw(ourShader);
-        ourModel2.StaticDraw(ourShader);
+        floor.StaticDraw(ourShader);
 
-        fallingSphere.setBoostWithCollisionSphere(ourModel);
-        fallingSphere.setBoostWithCollisionSphere(ourModel2);
+        // fallingSphere.setBoostWithCollisionRectangleSphere(ourModel);
+        // fallingSphere.setBoostWithCollisionRectangleSphere(ourModel2);
+        fallingSphere.setBoostWithCollisionRectangle(floor);
         fallingSphere.PhysicDraw(ourShader, deltaTime);
+
+        player.setBoostWithCollisionRectangle(floor);
+        // player.setBoostWithCollisionRectangle(fallingSphere);
+        player.playerDraw(ourShader, deltaTime);
 
 
         // glfw: swap buffers
         // ------------------
         glfwSwapBuffers(window);
+        // break;
     }
+    // while (true)
 
     // glfw: terminate, clearing all previously allocated GLFW resources.
     // ------------------------------------------------------------------
@@ -160,17 +177,23 @@ void processInput(GLFWwindow* window)
         glfwSetWindowShouldClose(window, true);
 
     if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
-        camera.ProcessKeyboard(FORWARD, deltaTime);
+        // camera.ProcessKeyboard(FORWARD, deltaTime);
+        player.processKeyboard(FORWARD, deltaTime);
     if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
-        camera.ProcessKeyboard(BACKWARD, deltaTime);
+        // camera.ProcessKeyboard(BACKWARD, deltaTime);
+        player.processKeyboard(BACKWARD, deltaTime);
     if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
-        camera.ProcessKeyboard(LEFT, deltaTime);
+        // camera.ProcessKeyboard(LEFT, deltaTime);
+        player.processKeyboard(LEFT, deltaTime);
     if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
-        camera.ProcessKeyboard(RIGHT, deltaTime);
+        // camera.ProcessKeyboard(RIGHT, deltaTime);
+        player.processKeyboard(RIGHT, deltaTime);
     if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS)
-        camera.ProcessKeyboard(UP, deltaTime);
+        // camera.ProcessKeyboard(UP, deltaTime);
+        player.processKeyboard(UP, deltaTime);
     if (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS)
-        camera.ProcessKeyboard(DOWN, deltaTime);
+        // camera.ProcessKeyboard(DOWN, deltaTime);
+        player.processKeyboard(DOWN, deltaTime);
 }
 
 // glfw: whenever the window size changed (by OS or user resize) this callback function executes
@@ -202,12 +225,13 @@ void mouse_callback(GLFWwindow* window, double xposIn, double yposIn)
     lastX = xpos;
     lastY = ypos;
 
-    camera.ProcessMouseMovement(xoffset, yoffset);
+    // camera.ProcessMouseMovement(xoffset, yoffset);
+    player.processMouseMovement(xoffset, yoffset);
 }
 
 // glfw: whenever the mouse scroll wheel scrolls, this callback is called
 // ----------------------------------------------------------------------
 void scroll_callback(GLFWwindow* window, double xoffset, double yoffset)
 {
-    camera.ProcessMouseScroll(static_cast<float>(yoffset));
+    // camera.ProcessMouseScroll(static_cast<float>(yoffset));
 }

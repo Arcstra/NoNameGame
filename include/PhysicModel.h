@@ -10,14 +10,12 @@
 #include "Shader.h"
 #include "Collision.h"
 
-#include <unordered_map>
-
 using namespace std;
 
 class StaticModel: public Model
 {
 public:
-    StaticModel(const string& path, GLfloat weight = 1.0f, GLfloat energyCoefficient = 0.8f): Model(path)
+    StaticModel(string path, GLfloat weight = 1.0f, GLfloat energyCoefficient = 0.8f): Model(path)
     {
         setParametres(weight, energyCoefficient);
     }
@@ -45,7 +43,7 @@ private:
 class PhysicModel: public Model
 {
 public:
-    PhysicModel(const string& path, GLfloat weight = 1.0f): Model(path)
+    PhysicModel(string path, GLfloat weight = 1.0f): Model(path)
     {
         setParametres(weight);
     }
@@ -53,12 +51,24 @@ public:
     void PhysicDraw(Shader& shader, GLfloat& delta)
     {
         setSpeed(delta);
-        cout << speed.y << " " << getCollisionSphere()[0].getCentre().y << "\n";
         setTranslate(this->speed * delta);
         Draw(shader);
+        // glm::vec3 centreCol = getCollisionRectangle()[0].getCentre();
+        // cout << centreCol.x << " " << centreCol.y << " " << centreCol.z << "\n";
+        // cout << speed.x << " " << speed.y << " " << speed.z << "\n";
     }
 
-    void setBoostWithCollisionRectangle(Model& other)
+    void setBoost(glm::vec3 strenght)
+    {
+        this->boost += strenght / this->weight;
+    }
+
+    glm::vec3 getSpeed()
+    {
+        return this->speed;
+    }
+
+    void setBoostWithCollisionRectangle(StaticModel& other)
     {
         glm::vec3 strenght(0.0f);
         vector<CollisionRectangle> collisions = other.getCollisionRectangle();
@@ -66,11 +76,63 @@ public:
 
         for (CollisionRectangle& my_collision: my_collisions) {
             for (CollisionRectangle& other_collision: collisions) {
-                strenght += my_collision.vecIntersection(other_collision);
+                strenght += vecIntersection(my_collision, other_collision);
+                strenght -= vecIntersection(other_collision, my_collision);
             }
         }
 
-        boost += strenght / weight;
+        // cout << strenght.x << " " << strenght.y << " " << strenght.z << "\n";
+
+        if (strenght != glm::vec3(0.0f)){
+            GLfloat coef = other.getEnergyCoefficient();
+            strenght = glm::normalize(strenght);
+            speed = strenght * glm::length(speed) * coef;
+            boost += strenght * glm::length(const_boost) * glm::dot(strenght, glm::vec3(0.0f, 1.0f, 0.0f)) / weight;
+            // cout << glm::dot(strenght, glm::vec3(0.0f, 1.0f, 0.0f)) << "\n";
+        }
+    }
+
+    void setBoostWithCollisionRectangle(PhysicModel& other)
+    {
+        glm::vec3 strenght(0.0f);
+        vector<CollisionRectangle> collisions = other.getCollisionRectangle();
+        vector<CollisionRectangle> my_collisions = getCollisionRectangle();
+
+        for (CollisionRectangle& my_collision: my_collisions) {
+            for (CollisionRectangle& other_collision: collisions) {
+                strenght += vecIntersection(my_collision, other_collision);
+                strenght -= vecIntersection(other_collision, my_collision);
+            }
+        }
+
+        // cout << strenght.x << " " << strenght.y << " " << strenght.z << "\n";
+
+        if (strenght != glm::vec3(0.0f)){
+            strenght = glm::normalize(strenght);
+            speed = strenght * glm::length(speed);
+            boost += strenght * glm::length(const_boost) * glm::dot(strenght, glm::vec3(0.0f, 1.0f, 0.0f)) / weight;
+            // cout << glm::dot(strenght, glm::vec3(0.0f, 1.0f, 0.0f)) << "\n";
+        }
+    }
+
+    void setBoostWithCollisionRectangleSphere(StaticModel& other)
+    {
+        glm::vec3 strenght(0.0f);
+        vector<CollisionSphere> collisions = other.getCollisionSphere();
+        vector<CollisionRectangle> my_collisions = getCollisionRectangle();
+
+        for (CollisionRectangle& my_collision: my_collisions) {
+            for (CollisionSphere& other_collision: collisions) {
+                strenght += vecIntersection(my_collision, other_collision);
+            }
+        }
+
+        if (strenght != glm::vec3(0.0f)){
+            GLfloat coef = other.getEnergyCoefficient();
+            strenght = glm::normalize(strenght);
+            speed = strenght * glm::length(speed) * coef;
+            boost += strenght * glm::length(const_boost) * glm::dot(strenght, glm::vec3(0.0f, 1.0f, 0.0f)) / weight;
+        }
     }
 
     void setBoostWithCollisionSphere(StaticModel& other)
@@ -81,7 +143,7 @@ public:
 
         for (CollisionSphere& myCollision: myCollisions) {
             for (CollisionSphere& otherCollision: otherCollisions) {
-                strenght += myCollision.vecIntersection(otherCollision);
+                strenght += vecIntersection(myCollision, otherCollision);
             }
         }
 
@@ -91,6 +153,12 @@ public:
             speed = strenght * glm::length(speed) * coef;
             boost += strenght * glm::length(const_boost) * glm::dot(strenght, glm::vec3(0.0f, 1.0f, 0.0f)) / weight;
         }
+    }
+
+    void setSpeed(GLfloat delta)
+    {
+        speed += (const_boost + boost) * delta;
+        boost = glm::vec3(0.0f);
     }
 
 private:
@@ -103,12 +171,6 @@ private:
         boost = glm::vec3(0.0f, 0.0f, 0.0f);
         speed = glm::vec3(0.0f);
         this->weight = weight;
-    }
-
-    void setSpeed(GLfloat delta)
-    {
-        speed += (const_boost + boost) * delta;
-        boost = glm::vec3(0.0f);
     }
 };
 
